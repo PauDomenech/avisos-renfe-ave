@@ -1,0 +1,37 @@
+name: check-avant
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: avant
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recuperar datos anteriores
+        run: |
+          mkdir -p site
+          git fetch -q origin gh-pages:refs/remotes/origin/gh-pages || true
+          git show origin/gh-pages:vigilar.json > site/vigilar.json 2>/dev/null || echo '{"watches":[],"since":"12h"}' > site/vigilar.json
+          git show origin/gh-pages:estado.json > site/estado.json 2>/dev/null || echo '{"updated":null,"routes":{}}' > site/estado.json
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install playwright==1.48.0 && python -m playwright install --with-deps chromium
+      - run: python check.py
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      - name: Publicar web
+        if: always()
+        run: |
+          cp index.html site/ && touch site/.nojekyll
+          cd site && git init -q -b gh-pages && git add -A
+          git -c user.name=avant-bot -c user.email=avant-bot@users.noreply.github.com commit -qm datos
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: debug, path: debug/, if-no-files-found: ignore }

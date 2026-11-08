@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Avant Figueres ⇄ Sants</title>
+<style>
+:root{--bg:#f6f6f4;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--ok:#1f7a3f;--ko:#b3261e;--ac:#6d28d9;--bd:#e4e4df;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#141413;--card:#1f1f1d;--tx:#eeeeea;--mu:#9b9b95;--ok:#5cc98a;--ko:#ff8a80;--ac:#9f7aea;--bd:#33332f;color-scheme:dark}}
+body{margin:0;font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+main{max-width:640px;margin:auto;padding:16px}
+header{display:flex;gap:8px;align-items:center;justify-content:space-between}
+select,button{font:inherit;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 12px}
+h2{font-size:15px;color:var(--mu);margin:20px 0 8px}
+.t{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin:6px 0}
+.h{font-weight:600;font-variant-numeric:tabular-nums;flex:1}
+.b{font-size:13px;font-weight:600}.libre{color:var(--ok)}.completo{color:var(--ko)}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:disabled{opacity:.6}
+small{color:var(--mu);display:block;margin-top:8px}
+</style></head>
+<body><main>
+<header>
+  <select id="r" aria-label="Trayecto">
+    <option value="FIG-BCN">Figueres Vilafant → Sants</option>
+    <option value="BCN-FIG">Sants → Figueres Vilafant</option>
+  </select>
+  <button id="cfg" aria-label="Configurar avisos">⚙️</button>
+</header>
+<small id="u"></small>
+<div id="l">Cargando…</div>
+</main>
+<script>
+var T = localStorage.getItem('topic') || '', P = JSON.parse(localStorage.getItem('pend') || '{}');
+var E = null, V = [], R = document.getElementById('r'); R.onchange = render;
+
+document.getElementById('cfg').onclick = function () {
+  var t = prompt('Tu topic de ntfy (el mismo que el secret NTFY_TOPIC). Solo se guarda en este navegador.', T);
+  if (t != null) { T = t.trim(); localStorage.setItem('topic', T); render(); }
+};
+function get(f) { return fetch(f + '?' + Date.now()).then(function (r) { return r.json(); }); }
+function load() {
+  Promise.all([get('estado.json'), get('vigilar.json')]).then(function (a) { E = a[0]; V = a[1].watches || []; render(); });
+}
+function toggle(id, quiero) {
+  if (!T) { document.getElementById('cfg').click(); if (!T) return; }
+  fetch('https://ntfy.sh/' + encodeURIComponent(T) + '-cmd', { method: 'POST', body: id })
+    .then(function (r) { if (!r.ok) throw 0; P[id] = { q: quiero, t: Date.now() }; render(); })
+    .catch(function () { alert('No se ha podido enviar. Revisa la conexión.'); });
+}
+function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+
+function render() {
+  var l = document.getElementById('l'); l.textContent = '';
+  document.getElementById('u').textContent = (E.updated
+    ? 'Actualizado ' + new Date(E.updated).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
+    : 'Sin datos aún') + ' · se revisa cada ~10 min' + (T ? '' : ' · ⚙️ configura tus avisos');
+  var d = (E.routes || {})[R.value] || {}, fs = Object.keys(d).sort();
+  if (!fs.length) l.textContent = 'Todavía no hay datos.';
+  fs.forEach(function (f) {
+    l.appendChild(el('h2', '', new Date(f + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })));
+    if (!d[f].length) l.appendChild(el('small', '', 'Sin Avant este día'));
+    d[f].forEach(function (t) {
+      var id = R.value + '|' + f + '|' + t.salida, w = V.indexOf(id) >= 0, p = P[id];
+      if (p && (p.q === w || Date.now() - p.t > 30 * 60000)) { delete P[id]; p = null; }
+      var row = el('div', 't');
+      row.appendChild(el('span', 'h', t.salida + ' → ' + t.llegada + (t.precio ? ' · ' + t.precio + ' €' : '')));
+      row.appendChild(el('span', 'b ' + t.estado, t.estado == 'libre' ? 'Libre' : 'Completo'));
+      if (p) { var b = el('button', '', '⏳ Pendiente'); b.disabled = true; row.appendChild(b); }
+      else if (w || t.estado == 'completo') {
+        b = el('button', w ? 'on' : '', w ? '🔔 Vigilando' : 'Avísame');
+        b.onclick = function () { toggle(id, !w); };
+        row.appendChild(b);
+      }
+      l.appendChild(row);
+    });
+  });
+  localStorage.setItem('pend', JSON.stringify(P));
+}
+load(); setInterval(load, 60000);
+</script>
+</body></html>
