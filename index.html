@@ -199,7 +199,7 @@ button:focus-visible{outline:2px solid var(--tint);outline-offset:2px}
 
   <div class="dayhead"><h2 id="dtitle"></h2><small id="dcheck"></small></div>
   <div class="group glass" id="list"><div class="empty">Cargando trenes…</div></div>
-  <div class="foot">Los próximos días se comprueban cada 10 minutos; el resto, cada pocas horas.</div>
+  <div class="foot" id="foot"></div>
 </main>
 
 <div id="sheetWrap">
@@ -387,7 +387,7 @@ $('scrim').onclick = $('close').onclick = closeSheet;
 function enviarAviso(id, quiero) {
   orden({ a: 'w', id: id }).then(function () {
     P[id] = { q: quiero, t: Date.now() }; render();
-    toast(quiero ? 'Te avisaremos cuando haya plaza' : 'Aviso cancelado');
+    toast(quiero ? 'Recibido. Se activa en la próxima comprobación' : 'Recibido. Se cancela en la próxima comprobación');
   }).catch(function () { toast('No se ha podido enviar. Inténtalo de nuevo.'); });
 }
 function toggle(id, quiero) {
@@ -524,7 +524,7 @@ function render() {
     if (!trenes.length) list.appendChild(el('div', 'empty', sel === h ? 'Hoy ya no quedan Avant en este sentido.' : 'No hay Avant a la venta este día. Puede que Renfe aún no haya abierto la venta.'));
     trenes.forEach(function (t) {
       var id = ruta + '|' + sel + '|' + t.salida, w = V.indexOf(id) >= 0, p = P[id];
-      if (p && (p.q === w || Date.now() - p.t > 30 * 60000)) { delete P[id]; p = null; }
+      if (p && (p.q === w || Date.now() - p.t > 3 * 3600000)) { delete P[id]; p = null; }
 
       var row = el('div', 'row');
       var tm = el('div', 't');
@@ -542,7 +542,7 @@ function render() {
       row.appendChild(st);
 
       if (p || w || t.estado !== 'libre') {
-        var btn = el('button', 'pill glass' + (w ? ' on' : ''), p ? (p.q ? 'Activando…' : 'Cancelando…') : w ? 'Te avisaré' : 'Avisarme');
+        var btn = el('button', 'pill glass' + (w ? ' on' : ''), p ? 'Pendiente' : w ? 'Te avisaré' : 'Avisarme');
         btn.disabled = !!p;
         btn.setAttribute('aria-label', (w ? 'Cancelar aviso del tren de las ' : 'Avisarme del tren de las ') + t.salida);
         btn.onclick = function () { toggle(id, !w); };
@@ -552,6 +552,12 @@ function render() {
     });
   }
   localStorage.setItem('pend', JSON.stringify(P));
+
+  var foot = $('foot'), m = E.updated ? Math.round((Date.now() - new Date(E.updated)) / 60000) : null;
+  foot.textContent = m === null ? 'Aún no se ha hecho ninguna comprobación.'
+    : 'Última comprobación: ' + (m < 1 ? 'ahora mismo' : m < 60 ? 'hace ' + m + ' min' : 'hace ' + Math.round(m / 60) + ' h')
+      + (m > 25 ? '. Va con retraso: revisa Actions en GitHub.' : '. Se repite cada 10 minutos.')
+      + (Object.keys(P).length ? ' Los botones «Pendiente» se activan en la siguiente.' : '');
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');

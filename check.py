@@ -123,21 +123,25 @@ def aplicar(vig, lineas):
 def leer_ordenes(vig):
     url = f"https://ntfy.sh/{CMD_TOPIC}/json?poll=1&since={vig.get('since', '12h')}"
     with urllib.request.urlopen(url, timeout=30) as r:
-        aplicar(vig, r.read().decode().splitlines())
+        lineas = [l for l in r.read().decode().splitlines() if '"event":"message"' in l]
+    aplicar(vig, lineas)
+    avisos = sum(len(d["watches"]) for d in vig["devices"].values())
+    moviles = sum(1 for d in vig["devices"].values() if d["sub"])
+    print(f"Ordenes nuevas: {len(lineas)} | moviles con avisos activados: {moviles} | trenes vigilados: {avisos}")
 
 
 def push(sub, titulo, texto):
-    """Envia la notificacion. Devuelve False si la suscripcion ya no existe (app borrada, permiso quitado)."""
+    """Envia la notificacion: "ok", "baja" (app borrada o permiso quitado) o "error" (se reintenta luego)."""
     from pywebpush import WebPushException, webpush
     try:
         webpush(sub, json.dumps({"title": titulo, "body": texto, "url": "https://www.renfe.com/es/es"}),
                 vapid_private_key=VAPID_PRIVATE,
                 vapid_claims={"sub": "mailto:avant-vigia@users.noreply.github.com"})
-        return True
+        return "ok"
     except WebPushException as e:
         code = getattr(e.response, "status_code", None)
         print("Error push", code, e)
-        return code not in (404, 410)
+        return "baja" if code in (404, 410) else "error"
 
 
 async def buscar(page, o, d, fecha, tag):
@@ -213,11 +217,12 @@ def main():
                 if not (tren and tren["estado"] == "libre" and dev["sub"] and VAPID_PRIVATE):
                     continue
                 dia = dt.date.fromisoformat(fecha).strftime("%d/%m")
-                if push(dev["sub"], "Plaza libre en el Avant de las " + salida,
-                        f"{NOMBRE[ruta]}, {dia}. Toca para ir a Renfe."):
+                r = push(dev["sub"], "Plaza libre en el Avant de las " + salida, f"{NOMBRE[ruta]}, {dia}. Toca para ir a Renfe.")
+                print("Aviso", ruta, fecha, salida, "->", r)
+                if r == "ok":
                     dev["watches"].remove(w)  # avisa una vez y deja de vigilar
-                else:
-                    del vig["devices"][hid]  # movil dado de baja
+                elif r == "baja":
+                    del vig["devices"][hid]
                     break
         # fusion: lo consultado ahora sustituye a lo anterior; lo demas se conserva; lo pasado se borra
         ahora = dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
