@@ -2,7 +2,10 @@
 import asyncio, datetime as dt, hashlib, json, os, re, sys, urllib.request
 from pathlib import Path
 
-DAYS = int(os.getenv("DAYS", "5"))
+NEAR = int(os.getenv("NEAR", "8"))        # dias proximos: se revisan en cada ejecucion
+HORIZON = int(os.getenv("HORIZON", "120"))  # dias lejanos: se revisan por turnos...
+ROT = int(os.getenv("ROT", "6"))            # ...tantos por ejecucion (120/6 = vuelta completa cada ~3 h)
+MAX_DIAS = 400                              # limite para los dias pedidos desde la web
 VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "").strip()
 VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "").strip()
 # Canal de ordenes de la web (publico; cada dispositivo firma con su id aleatorio, que nunca se publica)
@@ -101,6 +104,8 @@ def aplicar(vig, lineas):
         s = c.get("s")
         if c.get("a") == "sub" and isinstance(s, dict) and str(s.get("endpoint", "")).startswith("https://"):
             dev["sub"] = {"endpoint": s["endpoint"], "keys": s.get("keys", {})}
+        elif c.get("a") == "dia" and isinstance(c.get("f"), str) and re.fullmatch(r"\d{4}-\d\d-\d\d", c["f"]):
+            vig.setdefault("pedidos", {})[c["f"]] = (dt.date.today() + dt.timedelta(days=3)).isoformat()
         elif c.get("a") == "w" and isinstance(c.get("id"), str) and CMD.fullmatch(c["id"]):
             w = dev["watches"]
             w.remove(c["id"]) if c["id"] in w else w.append(c["id"])
@@ -177,15 +182,22 @@ def main():
         print("Faltan los secrets VAPID_PUBLIC / VAPID_PRIVATE: abre la web para generarlos")
 
     hoy = dt.date.today()
+    h = hoy.isoformat()
     for dev in vig["devices"].values():
-        dev["watches"] = [w for w in dev["watches"] if w.split("|")[1] >= hoy.isoformat()]
-    fechas = {hoy + dt.timedelta(i) for i in range(DAYS)}
-    fechas |= {dt.date.fromisoformat(w.split("|")[1]) for dev in vig["devices"].values() for w in dev["watches"]}
-    status = asyncio.run(consultar(fechas))
-    total = sum(len(t) for r in status.values() for t in r.values())
+        dev["watches"] = [w for w in dev["watches"] if w.split("|")[1] >= h]
+    vig["pedidos"] = {f: hasta for f, hasta in vig.get("pedidos", {}).items()
+                      if h <= f <= (hoy + dt.timedelta(MAX_DIAS)).isoformat() and hasta >= h}
+
+    cerca = {hoy + dt.timedelta(i) for i in range(NEAR)}
+    turno = int(dt.datetime.now(dt.timezone.utc).timestamp() // 600)  # cambia cada 10 min
+    lejos = {hoy + dt.timedelta(NEAR + (turno * ROT + k) % (HORIZON - NEAR)) for k in range(ROT)}
+    vigiladas = {dt.date.fromisoformat(w.split("|")[1]) for dev in vig["devices"].values() for w in dev["watches"]}
+    pedidas = {dt.date.fromisoformat(f) for f in vig["pedidos"]}
+    status = asyncio.run(consultar(cerca | lejos | vigiladas | pedidas))
+    total = sum(len(status[r].get(f.isoformat(), [])) for r in status for f in cerca)
 
     if total:
-        for h, dev in list(vig["devices"].items()):
+        for hid, dev in list(vig["devices"].items()):
             for w in list(dev["watches"]):
                 ruta, fecha, salida = w.split("|")
                 tren = next((t for t in status[ruta].get(fecha, []) if t["salida"] == salida), None)
@@ -196,10 +208,19 @@ def main():
                         f"{NOMBRE[ruta]}, {dia}. Toca para ir a Renfe."):
                     dev["watches"].remove(w)  # avisa una vez y deja de vigilar
                 else:
-                    del vig["devices"][h]  # movil dado de baja
+                    del vig["devices"][hid]  # movil dado de baja
                     break
+        # fusion: lo consultado ahora sustituye a lo anterior; lo demas se conserva; lo pasado se borra
+        ahora = dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes")
+        prev = json.loads((SITE / "estado.json").read_text())
+        routes, checked = prev.get("routes", {}), prev.get("checked", {})
+        for ruta, dias in status.items():
+            routes.setdefault(ruta, {}).update(dias)
+            checked.update({f: ahora for f in dias})
+        routes = {r: {f: t for f, t in d.items() if f >= h} for r, d in routes.items()}
+        checked = {f: t for f, t in checked.items() if f >= h}
         (SITE / "estado.json").write_text(json.dumps(
-            {"updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes"), "routes": status}))
+            {"updated": ahora, "routes": routes, "checked": checked}, separators=(",", ":")))
     vig["devices"] = {h: d for h, d in vig["devices"].items() if d["sub"] or d["watches"]}
     (SITE / "vigilar.json").write_text(json.dumps(vig))
     if not total:
@@ -226,7 +247,10 @@ if __name__ == "__main__":
                     msg({"d": "corto", "a": "w", "id": "FIG-BCN|2026-11-09|07:12"}, "d"),
                     json.dumps({"event": "message", "id": "e", "message": "basura"})])
         assert v == {"since": "e", "devices": {huella(dev_id): {"sub": sub, "watches": ["FIG-BCN|2026-11-09|07:12"]}}}, v
-        aplicar(v, [msg({"d": dev_id, "a": "w", "id": "FIG-BCN|2026-11-09|07:12"}, "f")])
+        aplicar(v, [msg({"d": dev_id, "a": "w", "id": "FIG-BCN|2026-11-09|07:12"}, "f"),
+                    msg({"d": dev_id, "a": "dia", "f": "2027-03-15"}, "g"),
+                    msg({"d": dev_id, "a": "dia", "f": "15/03/2027"}, "h")])
+        assert list(v["pedidos"]) == ["2027-03-15"], v
         assert v["devices"][huella(dev_id)]["watches"] == [], v
         print("ok")
     else:

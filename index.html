@@ -7,28 +7,30 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Avant">
-<meta name="theme-color" content="#e9e4f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#120b1f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eaf0f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1416" media="(prefers-color-scheme: dark)">
 <title>Avant · Figueres ⇄ Sants</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="icon.png">
 <style>
 :root{
-  --bg:#ece7f8; --b1:#d77ad9; --b2:#6fd0dd; --b3:#8a7cf5;
-  --glass:rgba(255,255,255,.52); --glass-hi:rgba(255,255,255,.78);
-  --edge:rgba(255,255,255,.85); --hair:rgba(60,60,67,.13); --shadow:rgba(40,16,80,.14);
-  --tx:#1c1c1e; --tx2:rgba(60,60,67,.62); --tint:#a3238f; --on-tint:#fff;
-  --ok:#248a3d; --ko:#d70015; --off:rgba(60,60,67,.5);
+  --bg:#eaf0f0; --b1:#86d6cb; --b2:#f5c98a; --b3:#a9bde6;
+  --glass:rgba(255,255,255,.5); --glass-hi:rgba(255,255,255,.8);
+  --edge:rgba(255,255,255,.9); --hair:rgba(28,40,40,.12); --shadow:rgba(16,48,48,.12);
+  --tx:#14201f; --tx2:rgba(20,32,31,.58); --dim:rgba(20,32,31,.28);
+  --tint:#0b6e69; --on-tint:#fff; --warm:#f0a535; --on-warm:#2b1900;
+  --ok:#1d8148; --ko:#cf3428; --off:rgba(20,32,31,.45);
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --bg:#120b1f; --b1:#7d2a86; --b2:#145a66; --b3:#3b2f9e;
-    --glass:rgba(44,40,56,.42); --glass-hi:rgba(70,64,88,.62);
-    --edge:rgba(255,255,255,.16); --hair:rgba(255,255,255,.09); --shadow:rgba(0,0,0,.45);
-    --tx:#f2f2f7; --tx2:rgba(235,235,245,.6); --tint:#e46bd3; --on-tint:#1c0b1f;
-    --ok:#30d158; --ko:#ff453a; --off:rgba(235,235,245,.42);
+    --bg:#0b1416; --b1:#0f5c56; --b2:#6a4514; --b3:#1f3266;
+    --glass:rgba(28,40,44,.45); --glass-hi:rgba(58,74,80,.62);
+    --edge:rgba(255,255,255,.14); --hair:rgba(255,255,255,.09); --shadow:rgba(0,0,0,.45);
+    --tx:#eef5f4; --tx2:rgba(230,242,240,.6); --dim:rgba(230,242,240,.25);
+    --tint:#5fd4c9; --on-tint:#04211f; --warm:#f5b04a; --on-warm:#2a1800;
+    --ok:#35d07f; --ko:#ff5c50; --off:rgba(230,242,240,.42);
     color-scheme:dark;
   }
 }
@@ -36,61 +38,69 @@
 html{background:var(--bg);height:100%}
 body{margin:0;min-height:100%;color:var(--tx);
   font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
-  padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);
-  -webkit-font-smoothing:antialiased}
+  padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:-20%;z-index:-1;
   background:
-    radial-gradient(38% 30% at 18% 22%,var(--b1),transparent 70%),
-    radial-gradient(34% 28% at 85% 12%,var(--b2),transparent 70%),
-    radial-gradient(45% 35% at 70% 78%,var(--b3),transparent 70%),
-    radial-gradient(30% 25% at 12% 88%,var(--b2),transparent 70%);
-  filter:blur(30px);opacity:.75}
+    radial-gradient(36% 28% at 15% 18%,var(--b1),transparent 70%),
+    radial-gradient(30% 24% at 88% 10%,var(--b2),transparent 70%),
+    radial-gradient(44% 34% at 75% 80%,var(--b3),transparent 70%),
+    radial-gradient(28% 22% at 10% 85%,var(--b1),transparent 70%);
+  filter:blur(34px);opacity:.7}
 
 .glass{background:var(--glass);
-  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
-  border:1px solid var(--edge);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 30px var(--shadow)}
+  -webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%);
+  border:1px solid var(--edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 30px var(--shadow)}
 
 main{max-width:560px;margin:0 auto;padding:0 16px}
 .title{display:flex;align-items:flex-end;justify-content:space-between;padding:18px 4px 12px}
 h1{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.01em;margin:0}
 .sub{color:var(--tx2);font-size:15px;margin-top:2px}
 
-.iconbtn{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
-  color:var(--tx);cursor:pointer;padding:0}
+.iconbtn{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--tx);cursor:pointer;padding:0}
 .iconbtn svg{width:22px;height:22px}
-.iconbtn .badge{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;
-  background:var(--ko);border:2px solid var(--glass-hi)}
+.iconbtn .badge{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--warm);border:2px solid var(--glass-hi)}
 
-.bar{position:sticky;top:env(safe-area-inset-top);z-index:5;padding:8px 0 10px;margin:0 -16px;padding-inline:16px}
-.bar::before{content:"";position:absolute;inset:0;z-index:-1;
-  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-  -webkit-mask:linear-gradient(#000 70%,transparent);mask:linear-gradient(#000 70%,transparent)}
+.bar{position:sticky;top:env(safe-area-inset-top);z-index:5;margin:0 -16px;padding:8px 16px 10px}
+.bar::before{content:"";position:absolute;inset:0;z-index:-1;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  -webkit-mask:linear-gradient(#000 75%,transparent);mask:linear-gradient(#000 75%,transparent)}
 
 .seg{display:flex;padding:3px;border-radius:999px;gap:2px}
 .seg button{flex:1;border:0;background:transparent;color:var(--tx);font:inherit;font-size:15px;font-weight:600;
   padding:9px 6px;border-radius:999px;cursor:pointer;transition:background .25s,box-shadow .25s}
 .seg button[aria-pressed=true]{background:var(--glass-hi);box-shadow:0 2px 10px var(--shadow),inset 0 1px 0 rgba(255,255,255,.5)}
 
-.days{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px 2px 4px;scrollbar-width:none}
-.days::-webkit-scrollbar{display:none}
-.day{flex:0 0 58px;scroll-snap-align:start;border-radius:18px;padding:8px 0 7px;text-align:center;cursor:pointer;
-  color:var(--tx);font:inherit;transition:background .2s,transform .2s}
-.day small{display:block;font-size:12px;color:var(--tx2);text-transform:capitalize}
-.day b{display:block;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.day i{display:block;width:5px;height:5px;border-radius:50%;margin:3px auto 0;background:transparent}
-.day i.w{background:var(--tint)}
+.weeknav{display:flex;align-items:center;gap:6px;margin-top:10px}
+.nav{width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--tint);display:grid;place-items:center;cursor:pointer;padding:0}
+.nav:disabled{color:var(--dim)}
+.nav svg{width:20px;height:20px}
+.wlabel{flex:1;border:0;background:transparent;color:var(--tx);font:inherit;font-weight:600;font-size:17px;text-align:left;
+  padding:6px 4px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.wlabel svg{width:16px;height:16px;color:var(--tint)}
+.today{border:0;font:inherit;font-size:14px;font-weight:600;border-radius:999px;padding:6px 12px;color:var(--tint);cursor:pointer}
+
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+.day{border-radius:16px;padding:7px 0 6px;text-align:center;cursor:pointer;color:var(--tx);font:inherit;min-width:0}
+.day small{display:block;font-size:12px;color:var(--tx2)}
+.day b{display:block;font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.day i{display:block;width:5px;height:5px;border-radius:50%;margin:2px auto 0}
+.day i.w{background:var(--warm)}
+.day.we small{color:var(--tint)}
 .day[aria-pressed=true]{background:var(--tint);border-color:transparent;color:var(--on-tint)}
-.day[aria-pressed=true] small{color:inherit;opacity:.8}
-.day[aria-pressed=true] i.w{background:var(--on-tint)}
-.day:active{transform:scale(.95)}
+.day[aria-pressed=true] small{color:inherit;opacity:.85}
+.day:disabled{opacity:.35;cursor:default}
+.day.hoy:not([aria-pressed=true]) b{color:var(--tint)}
 
 .banner{display:flex;align-items:center;gap:12px;border-radius:22px;padding:14px 16px;margin-top:12px}
 .banner p{margin:0;flex:1;font-size:15px}
 .banner p b{display:block}
 .banner p span{color:var(--tx2)}
 
-.group{border-radius:24px;margin-top:14px;overflow:hidden}
+.dayhead{display:flex;align-items:baseline;justify-content:space-between;margin:18px 6px 0}
+.dayhead h2{margin:0;font-size:22px;font-weight:700}
+.dayhead h2::first-letter{text-transform:uppercase}
+.dayhead small{color:var(--tx2);font-size:13px}
+
+.group{border-radius:24px;margin-top:10px;overflow:hidden}
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;position:relative}
 .row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--hair)}
 .t{flex:1;min-width:0}
@@ -99,22 +109,22 @@ h1{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.01em;margin:0}
 .st{text-align:right;font-size:14px;line-height:1.25}
 .st b{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
 .st .libre{color:var(--ok)} .st .completo{color:var(--ko)} .st .no_venta{color:var(--off)}
-.row.gone{opacity:.4}
 
 .pill{border:0;font:inherit;font-size:15px;font-weight:600;border-radius:999px;padding:8px 14px;cursor:pointer;
   color:var(--tint);white-space:nowrap;transition:transform .15s,background .2s}
 .pill:active{transform:scale(.94)}
-.pill.on{background:var(--tint);color:var(--on-tint);border-color:transparent}
+.pill.on{background:var(--warm);color:var(--on-warm);border-color:transparent}
 .pill:disabled{opacity:.6}
 .pill.big{display:block;width:100%;padding:14px;font-size:17px;background:var(--tint);color:var(--on-tint)}
 
-.empty{padding:28px 20px;text-align:center;color:var(--tx2)}
+.empty{padding:26px 20px;text-align:center;color:var(--tx2)}
+.empty .pill{margin-top:12px}
 .foot{color:var(--tx2);font-size:13px;text-align:center;margin-top:16px}
 
 .scrim{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;max-height:88vh;overflow-y:auto;
   border-radius:30px 30px 0 0;padding:10px 22px calc(env(safe-area-inset-bottom) + 22px);
-  background:var(--glass-hi);transform:translateY(105%);max-height:88vh;overflow-y:auto;transition:transform .38s cubic-bezier(.2,.9,.25,1)}
+  background:var(--glass-hi);transform:translateY(105%);transition:transform .38s cubic-bezier(.2,.9,.25,1)}
 .open .scrim{opacity:1;pointer-events:auto}
 .open .sheet{transform:none}
 .grab{width:38px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 14px}
@@ -124,10 +134,26 @@ h1{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.01em;margin:0}
 .steps li{counter-increment:s;display:flex;gap:12px;padding:8px 0;font-size:15px}
 .steps li::before{content:counter(s);flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;
   font-size:14px;font-weight:700;background:var(--tint);color:var(--on-tint)}
-.steps a{color:var(--tint)}
-.field{width:100%;font:inherit;padding:13px 16px;border-radius:16px;border:1px solid var(--hair);
-  background:var(--glass);color:var(--tx);margin-bottom:12px}
 .ghost{display:block;margin:10px auto 0;border:0;background:none;color:var(--tx2);font:inherit;font-size:15px;cursor:pointer}
+.key{font:13px/1.4 ui-monospace,Menlo,monospace;word-break:break-all;padding:12px 14px;border-radius:14px;
+  background:var(--glass);border:1px solid var(--hair);margin:4px 0 8px;user-select:all;-webkit-user-select:all}
+.lbl{font-size:13px;font-weight:600;color:var(--tx2);margin-top:10px}
+.copy{margin-bottom:6px}
+.share{display:inline-block;vertical-align:-3px;width:18px;height:18px}
+
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calhead h2{margin:0}
+.calhead h2::first-letter{text-transform:uppercase}
+.calhead div{display:flex;gap:4px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal small{font-size:12px;color:var(--tx2);padding:4px 0}
+.cal button{aspect-ratio:1;border:0;border-radius:50%;background:transparent;color:var(--tx);font:inherit;font-size:17px;
+  font-variant-numeric:tabular-nums;cursor:pointer;position:relative;padding:0}
+.cal button:disabled{color:var(--dim);cursor:default}
+.cal button.hoy{color:var(--tint);font-weight:700}
+.cal button.sel{background:var(--tint);color:var(--on-tint);font-weight:600}
+.cal button.w::after{content:"";position:absolute;left:50%;bottom:12%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--warm)}
+.cal button.we:not(.sel):not(:disabled){color:var(--tint)}
 
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:30;
   transform:translate(-50%,140%);border-radius:999px;padding:12px 20px;font-size:15px;font-weight:500;
@@ -135,12 +161,7 @@ h1{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.01em;margin:0}
   transition:transform .35s cubic-bezier(.2,.9,.25,1),opacity .35s,visibility .35s}
 .toast.show{transform:translate(-50%,0);opacity:1;visibility:visible}
 
-.key{font:13px/1.4 ui-monospace,Menlo,monospace;word-break:break-all;padding:12px 14px;border-radius:14px;
-  background:var(--glass);border:1px solid var(--hair);margin:4px 0 8px;user-select:all;-webkit-user-select:all}
-.lbl{font-size:13px;font-weight:600;color:var(--tx2);margin-top:10px}
-.copy{margin-bottom:6px}
-.share{display:inline-block;vertical-align:-3px;width:18px;height:18px}
-button:focus-visible,.field:focus-visible{outline:2px solid var(--tint);outline-offset:2px}
+button:focus-visible{outline:2px solid var(--tint);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -162,7 +183,13 @@ button:focus-visible,.field:focus-visible{outline:2px solid var(--tint);outline-
       <button data-r="FIG-BCN">Figueres → Sants</button>
       <button data-r="BCN-FIG">Sants → Figueres</button>
     </div>
-    <div class="days" id="days"></div>
+    <div class="weeknav">
+      <button class="nav" id="prev" aria-label="Semana anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button class="wlabel" id="wlabel" aria-label="Elegir fecha"><span id="wtext"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
+      <button class="today glass" id="hoyBtn" hidden>Hoy</button>
+      <button class="nav" id="next" aria-label="Semana siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+    <div class="week" id="week"></div>
   </div>
 
   <div class="banner glass" id="banner" hidden>
@@ -170,8 +197,9 @@ button:focus-visible,.field:focus-visible{outline:2px solid var(--tint);outline-
     <button class="pill glass" id="bannerBtn"></button>
   </div>
 
+  <div class="dayhead"><h2 id="dtitle"></h2><small id="dcheck"></small></div>
   <div class="group glass" id="list"><div class="empty">Cargando trenes…</div></div>
-  <div class="foot" id="foot"></div>
+  <div class="foot">Los próximos días se comprueban cada 10 minutos; el resto, cada pocas horas.</div>
 </main>
 
 <div id="sheetWrap">
@@ -184,13 +212,13 @@ button:focus-visible,.field:focus-visible{outline:2px solid var(--tint);outline-
 </div>
 
 <div class="toast glass" id="toast" role="status"></div>
-
 <script>
 var $ = function (id) { return document.getElementById(id); };
 var TZ = 'Europe/Madrid';
-var E = { routes: {} }, VIG = { devices: {} }, V = [], CFG = { vapid: '' };
-var ruta = localStorage.getItem('ruta') || 'FIG-BCN', fecha = null, intent = null;
+var E = { routes: {}, checked: {} }, VIG = { devices: {} }, V = [], CFG = { vapid: '' };
+var ruta = localStorage.getItem('ruta') || 'FIG-BCN', intent = null;
 var P = JSON.parse(localStorage.getItem('pend') || '{}');
+var PED = JSON.parse(localStorage.getItem('pedidos') || '{}');
 
 // Identidad de este dispositivo: aleatoria, solo vive aquí. En iPhone, la app de la pantalla de inicio tiene su propio almacenamiento.
 var ID = localStorage.getItem('device');
@@ -201,9 +229,25 @@ var STANDALONE = matchMedia('(display-mode: standalone)').matches || navigator.s
 var PUSH_OK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 var IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+// ---- fechas (cadenas YYYY-MM-DD, aritmética en UTC para no depender de la zona) ----
 function hoy() { return new Date().toLocaleDateString('sv-SE', { timeZone: TZ }); }
 function ahora() { return new Date().toLocaleTimeString('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }); }
+function pd(s) { return new Date(s + 'T00:00:00Z'); }
+function add(s, n) { var d = pd(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function lunes(s) { return add(s, -((pd(s).getUTCDay() + 6) % 7)); }
+function fmt(s, o) { return pd(s).toLocaleDateString('es-ES', Object.assign({ timeZone: 'UTC' }, o)); }
+function finde(s) { var w = pd(s).getUTCDay(); return w === 0 || w === 6; }
+var MAX = add(hoy(), 365);
+var sel = hoy();
+
 function mins(a, b) { var x = a.split(':'), y = b.split(':'); return (y[0] - x[0]) * 60 + (y[1] - x[1]); }
+function hace(isoTs) {
+  var m = Math.round((Date.now() - new Date(isoTs)) / 60000);
+  if (m < 1) return 'Comprobado ahora';
+  if (m < 60) return 'Comprobado hace ' + m + ' min';
+  if (m < 48 * 60) return 'Comprobado hace ' + Math.round(m / 60) + ' h';
+  return 'Comprobado hace ' + Math.round(m / 1440) + ' días';
+}
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 function sha(t) {
   return crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)).then(function (b) {
@@ -339,7 +383,7 @@ $('bell').onclick = abrirAvisos;
 $('bannerBtn').onclick = abrirAvisos;
 $('scrim').onclick = $('close').onclick = closeSheet;
 
-// ---- avisos de trenes ----
+// ---- avisos de trenes y días pedidos ----
 function enviarAviso(id, quiero) {
   orden({ a: 'w', id: id }).then(function () {
     P[id] = { q: quiero, t: Date.now() }; render();
@@ -349,6 +393,54 @@ function enviarAviso(id, quiero) {
 function toggle(id, quiero) {
   if (estadoAvisos() !== 'ok') { intent = [id, quiero]; abrirAvisos(); return; }
   enviarAviso(id, quiero);
+}
+function pedirDia(f) {
+  if (!CFG.vapid) { abrirSetup(); return; }
+  orden({ a: 'dia', f: f }).then(function () {
+    PED[f] = Date.now(); localStorage.setItem('pedidos', JSON.stringify(PED)); render();
+    toast('Lo consulto en la próxima comprobación');
+  }).catch(function () { toast('No se ha podido enviar. Inténtalo de nuevo.'); });
+}
+function vigilado(f) { return V.some(function (w) { return w.split('|')[1] === f; }); }
+
+// ---- calendario ----
+function abrirCalendario(mes) {
+  mes = mes || sel.slice(0, 7);
+  var min = hoy().slice(0, 7), max = MAX.slice(0, 7);
+  var primero = mes + '-01';
+  var head = el('div', 'calhead');
+  head.appendChild(el('h2', '', fmt(primero, { month: 'long', year: 'numeric' })));
+  var nav = el('div');
+  var mesAnt = add(primero, -1).slice(0, 7), mesSig = add(primero, 32).slice(0, 7);
+  [['m15 18-6-6 6-6', mesAnt, mes <= min, 'Mes anterior'], ['m9 18 6-6-6-6', mesSig, mes >= max, 'Mes siguiente']].forEach(function (x) {
+    var b = el('button', 'nav glass'); b.disabled = x[2]; b.setAttribute('aria-label', x[3]);
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="' + x[0] + '"/></svg>';
+    b.onclick = function () { abrirCalendario(x[1]); };
+    nav.appendChild(b);
+  });
+  head.appendChild(nav);
+
+  var grid = el('div', 'cal');
+  ['L', 'M', 'X', 'J', 'V', 'S', 'D'].forEach(function (d) { grid.appendChild(el('small', '', d)); });
+  var off = (pd(primero).getUTCDay() + 6) % 7, h = hoy();
+  for (var i = 0; i < off; i++) grid.appendChild(el('span'));
+  for (var f = primero; f.slice(0, 7) === mes; f = add(f, 1)) {
+    (function (f) {
+      var b = el('button', '', pd(f).getUTCDate());
+      if (f === h) b.classList.add('hoy');
+      if (f === sel) b.classList.add('sel');
+      if (finde(f)) b.classList.add('we');
+      if (vigilado(f)) b.classList.add('w');
+      b.disabled = f < h || f > MAX;
+      b.setAttribute('aria-label', fmt(f, { weekday: 'long', day: 'numeric', month: 'long' }));
+      b.onclick = function () { sel = f; closeSheet(); render(); };
+      grid.appendChild(b);
+    })(f);
+  }
+  var hoyB = el('button', 'pill glass', 'Ir a hoy');
+  hoyB.style.marginTop = '14px';
+  hoyB.onclick = function () { sel = hoy(); closeSheet(); render(); };
+  sheet([head, grid, hoyB]);
 }
 
 // ---- datos ----
@@ -370,6 +462,10 @@ function load() {
 document.querySelectorAll('.seg button').forEach(function (b) {
   b.onclick = function () { ruta = b.dataset.r; localStorage.setItem('ruta', ruta); render(); };
 });
+$('prev').onclick = function () { var f = add(sel, -7); sel = f < hoy() ? hoy() : f; render(); };
+$('next').onclick = function () { var f = add(sel, 7); sel = f > MAX ? MAX : f; render(); };
+$('hoyBtn').onclick = function () { sel = hoy(); render(); };
+$('wlabel').onclick = function () { abrirCalendario(); };
 
 var BANNER = {
   setup: ['Falta la configuración inicial', 'Genera las claves de las notificaciones. Solo una vez.', 'Configurar'],
@@ -381,35 +477,53 @@ var BANNER = {
 
 function render() {
   var h = hoy(), now = ahora(), est = estadoAvisos(), bn = BANNER[est];
+  if (sel < h) sel = h;
   document.querySelectorAll('.seg button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.r === ruta); });
   $('badge').hidden = est === 'ok';
   $('banner').hidden = !bn;
   if (bn) { $('bannerTitle').textContent = bn[0]; $('bannerText').textContent = bn[1]; $('bannerBtn').textContent = bn[2]; }
 
-  var d = (E.routes || {})[ruta] || {};
-  var fs = Object.keys(d).filter(function (f) { return f >= h; }).sort();
-  if (fs.indexOf(fecha) < 0) fecha = fs[0] || null;
+  // semana
+  var a = lunes(sel), b = add(a, 6);
+  $('wtext').textContent = a.slice(5, 7) === b.slice(5, 7)
+    ? fmt(a, { day: 'numeric' }) + ' – ' + fmt(b, { day: 'numeric', month: 'short' })
+    : fmt(a, { day: 'numeric', month: 'short' }) + ' – ' + fmt(b, { day: 'numeric', month: 'short' });
+  $('prev').disabled = a <= lunes(h);
+  $('next').disabled = add(a, 7) > MAX;
+  $('hoyBtn').hidden = a === lunes(h);
 
-  var days = $('days'); days.textContent = '';
-  fs.forEach(function (f) {
-    var dt = new Date(f + 'T12:00:00');
-    var b = el('button', 'day glass');
-    b.setAttribute('aria-pressed', f === fecha);
-    b.appendChild(el('small', '', f === h ? 'hoy' : dt.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '')));
-    b.appendChild(el('b', '', dt.getDate()));
-    var vig = V.some(function (w) { return w.indexOf(ruta + '|' + f + '|') === 0; });
-    b.appendChild(el('i', vig ? 'w' : ''));
-    b.onclick = function () { fecha = f; render(); };
-    days.appendChild(b);
-  });
+  var d = (E.routes || {})[ruta] || {};
+  var week = $('week'); week.textContent = '';
+  for (var i = 0; i < 7; i++) {
+    (function (f) {
+      var bt = el('button', 'day glass' + (finde(f) ? ' we' : '') + (f === h ? ' hoy' : ''));
+      bt.setAttribute('aria-pressed', f === sel);
+      bt.disabled = f < h || f > MAX;
+      bt.appendChild(el('small', '', fmt(f, { weekday: 'short' }).replace('.', '')));
+      bt.appendChild(el('b', '', pd(f).getUTCDate()));
+      bt.appendChild(el('i', vigilado(f) && V.some(function (w) { return w.indexOf(ruta + '|' + f) === 0; }) ? 'w' : ''));
+      bt.onclick = function () { sel = f; render(); };
+      week.appendChild(bt);
+    })(add(a, i));
+  }
+
+  // día seleccionado
+  $('dtitle').textContent = sel === h ? 'Hoy' : sel === add(h, 1) ? 'Mañana' : fmt(sel, { weekday: 'long', day: 'numeric', month: 'long' });
+  $('dcheck').textContent = (E.checked || {})[sel] ? hace(E.checked[sel]) : '';
 
   var list = $('list'); list.textContent = '';
-  if (!fecha) { list.appendChild(el('div', 'empty', 'Aún no hay datos. El primer chequeo tarda unos minutos.')); }
-  else {
-    var trenes = (d[fecha] || []).filter(function (t) { return fecha !== h || t.salida >= now; });
-    if (!trenes.length) list.appendChild(el('div', 'empty', fecha === h ? 'Hoy ya no quedan Avant en este sentido.' : 'No hay Avant este día.'));
+  var trenes = d[sel];
+  if (trenes === undefined) {
+    var box = el('div', 'empty');
+    var pedido = PED[sel] && Date.now() - PED[sel] < 20 * 60000;
+    box.appendChild(el('div', '', pedido ? 'Consultando este día. Aparecerá en la próxima comprobación.' : 'Todavía no hay datos de este día.'));
+    if (!pedido) { var pb = el('button', 'pill glass', 'Consultar ahora'); pb.onclick = function () { pedirDia(sel); }; box.appendChild(pb); }
+    list.appendChild(box);
+  } else {
+    trenes = trenes.filter(function (t) { return sel !== h || t.salida >= now; });
+    if (!trenes.length) list.appendChild(el('div', 'empty', sel === h ? 'Hoy ya no quedan Avant en este sentido.' : 'No hay Avant a la venta este día. Puede que Renfe aún no haya abierto la venta.'));
     trenes.forEach(function (t) {
-      var id = ruta + '|' + fecha + '|' + t.salida, w = V.indexOf(id) >= 0, p = P[id];
+      var id = ruta + '|' + sel + '|' + t.salida, w = V.indexOf(id) >= 0, p = P[id];
       if (p && (p.q === w || Date.now() - p.t > 30 * 60000)) { delete P[id]; p = null; }
 
       var row = el('div', 'row');
@@ -438,13 +552,6 @@ function render() {
     });
   }
   localStorage.setItem('pend', JSON.stringify(P));
-
-  var foot = 'Se comprueba cada 10 minutos.';
-  if (E.updated) {
-    var m = Math.round((Date.now() - new Date(E.updated)) / 60000);
-    foot = (m < 1 ? 'Actualizado ahora. ' : 'Actualizado hace ' + m + ' min. ') + foot;
-  }
-  $('foot').textContent = foot;
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
