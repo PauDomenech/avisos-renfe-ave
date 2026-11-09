@@ -5,14 +5,12 @@ from pathlib import Path
 DAYS = int(os.getenv("DAYS", "5"))
 TOPIC = os.environ.get("NTFY_TOPIC", "")
 SITE, DEBUG = Path("site"), Path("debug")
-# shortcut: codigos y campos del formulario de memoria; si sale "0 trenes", revisar con el artifact debug
-FIG = ("FIGUERES VILAFANT", "79315")
-BCN = ("BARCELONA-SANTS", "71801")
-ROUTES = {"FIG-BCN": (FIG, BCN), "BCN-FIG": (BCN, FIG)}
+BCN = ("BARCELONA-SANTS", "71801")  # confirmado con la pagina de Renfe
+ESTACIONES_JS = "https://www.renfe.com/content/dam/renfe/es/General/buscadores/javascript/estacionesEstaticas.js"
 NOMBRE = {"FIG-BCN": "Figueres Vilafant → Barcelona Sants", "BCN-FIG": "Barcelona Sants → Figueres Vilafant"}
 SEARCH_URL = "https://venta.renfe.com/vol/buscarTren.do?Idioma=es&Pais=ES"
-TIME = re.compile(r"\b(\d{1,2})[:.](\d{2})\b")
-FULL = re.compile(r"complet|agotad|no disponible|sin plazas", re.I)
+HORAS = re.compile(r"salida a las (\d\d:\d\d) y llegada a las (\d\d:\d\d)")
+TIPO = re.compile(r"Tipo de tren: ([^.]+)")
 CMD = re.compile(r"(FIG-BCN|BCN-FIG)\|\d{4}-\d\d-\d\d\|\d\d:\d\d")
 
 SUBMIT_JS = """({url, fields}) => {
@@ -23,14 +21,12 @@ SUBMIT_JS = """({url, fields}) => {
   document.body.appendChild(f); f.submit();
 }"""
 
-# Elemento mas pequeno que contiene "AVANT" y dos horas = una fila de tren (no depende de clases CSS)
-ROWS_JS = """() => {
-  const c = [...document.querySelectorAll('div,li,tr,article')].filter(e => {
-    const t = e.innerText || '';
-    return /avant/i.test(t) && (t.match(/\\b\\d{1,2}[:.]\\d{2}\\b/g) || []).length >= 2 && t.length < 2000;
-  });
-  return c.filter(e => !c.some(o => o !== e && e.contains(o))).map(e => e.innerText);
-}"""
+# Filas de la lista de ida: horas y tipo vienen en aria-labels; el aviso (completo / no a la venta) en #boton-style
+ROWS_JS = """() => [...document.querySelectorAll('#listaTrenesTBodyIda > div[id^="tren_i_"]')].map(r => ({
+  lab: [...r.querySelectorAll('[aria-label]')].map(e => e.getAttribute('aria-label')).join(' '),
+  aviso: r.querySelector('#boton-style')?.getAttribute('title') || '',
+  precio: r.querySelector('.precio-final')?.getAttribute('title') || '',
+}))"""
 
 
 def form(o, d, fecha):
@@ -43,17 +39,35 @@ def form(o, d, fecha):
             "franjaHoraI": "", "franjaHoraV": "", "Idioma": "es", "Pais": "ES"}
 
 
-def parse(texts):
+def parse(rows):
     trenes = {}
-    for t in texts:
-        horas = [f"{int(h):02d}:{m}" for h, m in TIME.findall(t)]
-        if len(horas) < 2:
+    for r in rows:
+        h, tipo = HORAS.search(r["lab"]), TIPO.search(r["lab"])
+        if not h or not tipo or "AVANT" not in tipo.group(1).upper():
             continue
-        precio = re.search(r"(\d+[.,]\d{2})\s*€", t)
-        trenes[horas[0]] = {"salida": horas[0], "llegada": horas[1],
-                            "estado": "completo" if FULL.search(t) else "libre",
-                            "precio": precio.group(1) if precio else None}
+        aviso = r["aviso"].lower()
+        if "no circula" in aviso:
+            continue
+        precio = re.search(r"\d+,\d{2}", r["precio"])
+        trenes[h[1]] = {"salida": h[1], "llegada": h[2], "precio": precio[0] if precio else None,
+                        "estado": "completo" if "completo" in aviso else "no_venta" if aviso else "libre"}
     return sorted(trenes.values(), key=lambda x: x["salida"])
+
+
+async def codigo_figueres(page):
+    """Codigo de Figueres Vilafant sacado de la lista de estaciones de Renfe (o del secret FIG_CODE)."""
+    if os.getenv("FIG_CODE"):
+        return os.environ["FIG_CODE"]
+    js = await page.evaluate(f"fetch('{ESTACIONES_JS}').then(r => r.text())")
+    i = js.upper().find("VILAFANT")
+    if i < 0:
+        sys.exit("No encuentro Figueres Vilafant en la lista de estaciones de Renfe")
+    ctx = js[max(0, i - 300):i + 300]
+    print("Contexto Vilafant:", ctx)
+    cods = [(abs(m.start() - 300), m[0]) for m in re.finditer(r"\b\d{5}\b", ctx)]
+    if not cods:
+        sys.exit("No encuentro el codigo de Figueres Vilafant")
+    return min(cods)[1]
 
 
 def aplicar(vig, lineas):
@@ -102,7 +116,9 @@ async def consultar(fechas):
             await page.click("#onetrust-accept-btn-handler", timeout=5000)
         except Exception:
             pass
-        for ruta, (o, d) in ROUTES.items():
+        fig = ("FIGUERES VILAFANT", await codigo_figueres(page))
+        print("Codigo Figueres Vilafant:", fig[1])
+        for ruta, (o, d) in {"FIG-BCN": (fig, BCN), "BCN-FIG": (BCN, fig)}.items():
             status[ruta] = {}
             for f in sorted(fechas):
                 trenes = await buscar(page, o, d, f, f"{ruta}_{f}")
@@ -143,9 +159,14 @@ def main():
 
 if __name__ == "__main__":
     if "--test" in sys.argv:
-        r = parse(["AVANT 08123\n7:12\n8:05\nCompleto", "AVANT 08125\n09.40 10.33\n4,05 €", "sin horas AVANT"])
-        assert r == [{"salida": "07:12", "llegada": "08:05", "estado": "completo", "precio": None},
-                     {"salida": "09:40", "llegada": "10:33", "estado": "libre", "precio": "4,05"}], r
+        lab = "Tren con salida a las {} y llegada a las {}. Tipo de tren: {}."
+        r = parse([{"lab": lab.format("07:12", "08:05", "AVANT"), "aviso": "Tren Completo", "precio": ""},
+                   {"lab": lab.format("09:40", "10:33", "AVANT"), "aviso": "", "precio": "Precio desde 4,05"},
+                   {"lab": lab.format("11:00", "11:50", "AVANT"), "aviso": "Este tren no se encuentra disponible para la venta", "precio": ""},
+                   {"lab": lab.format("12:00", "12:50", "AVANT"), "aviso": "Tren no circula", "precio": ""},
+                   {"lab": lab.format("06:16", "08:51", "REGIONAL"), "aviso": "", "precio": "Precio desde 14,40"}])
+        assert [(t["salida"], t["estado"], t["precio"]) for t in r] == [
+            ("07:12", "completo", None), ("09:40", "libre", "4,05"), ("11:00", "no_venta", None)], r
         v = {"watches": [], "since": "12h"}
         aplicar(v, ['{"event":"open","id":"a"}', '{"event":"message","id":"b","message":"FIG-BCN|2026-11-09|07:12"}',
                     '{"event":"message","id":"c","message":"basura"}'])

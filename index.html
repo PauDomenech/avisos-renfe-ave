@@ -12,7 +12,7 @@ select,button{font:inherit;border-radius:10px;border:1px solid var(--bd);backgro
 h2{font-size:15px;color:var(--mu);margin:20px 0 8px}
 .t{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin:6px 0}
 .h{font-weight:600;font-variant-numeric:tabular-nums;flex:1}
-.b{font-size:13px;font-weight:600}.libre{color:var(--ok)}.completo{color:var(--ko)}
+.b{font-size:13px;font-weight:600}.libre{color:var(--ok)}.completo{color:var(--ko)}.no_venta{color:var(--mu)}
 button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 button:disabled{opacity:.6}
 small{color:var(--mu);display:block;margin-top:8px}
@@ -63,9 +63,9 @@ function render() {
       if (p && (p.q === w || Date.now() - p.t > 30 * 60000)) { delete P[id]; p = null; }
       var row = el('div', 't');
       row.appendChild(el('span', 'h', t.salida + ' → ' + t.llegada + (t.precio ? ' · ' + t.precio + ' €' : '')));
-      row.appendChild(el('span', 'b ' + t.estado, t.estado == 'libre' ? 'Libre' : 'Completo'));
+      row.appendChild(el('span', 'b ' + t.estado, t.estado == 'libre' ? 'Libre' : t.estado == 'completo' ? 'Completo' : 'No a la venta'));
       if (p) { var b = el('button', '', '⏳ Pendiente'); b.disabled = true; row.appendChild(b); }
-      else if (w || t.estado == 'completo') {
+      else if (w || t.estado != 'libre') {
         b = el('button', w ? 'on' : '', w ? '🔔 Vigilando' : 'Avísame');
         b.onclick = function () { toggle(id, !w); };
         row.appendChild(b);
