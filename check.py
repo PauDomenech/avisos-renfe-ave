@@ -1,9 +1,12 @@
-"""Avant Figueres Vilafant <-> Barcelona Sants: consulta Renfe, aplica ordenes de la web y avisa por ntfy."""
-import asyncio, datetime as dt, json, os, re, sys, urllib.request
+"""Avant Figueres Vilafant <-> Barcelona Sants: consulta Renfe, aplica ordenes de la web y avisa con Web Push."""
+import asyncio, datetime as dt, hashlib, json, os, re, sys, urllib.request
 from pathlib import Path
 
 DAYS = int(os.getenv("DAYS", "5"))
-TOPIC = os.environ.get("NTFY_TOPIC", "")
+VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "").strip()
+VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "").strip()
+# Canal de ordenes de la web (publico; cada dispositivo firma con su id aleatorio, que nunca se publica)
+CMD_TOPIC = "avant-" + hashlib.sha256(VAPID_PUBLIC.encode()).hexdigest()[:20]
 SITE, DEBUG = Path("site"), Path("debug")
 BCN = ("BARCELONA-SANTS", "71801")  # confirmado con la pagina de Renfe
 ESTACIONES_JS = "https://www.renfe.com/content/dam/renfe/es/General/buscadores/javascript/estacionesEstaticas.js"
@@ -62,30 +65,65 @@ async def codigo_figueres(page):
     i = js.upper().find("VILAFANT")
     if i < 0:
         sys.exit("No encuentro Figueres Vilafant en la lista de estaciones de Renfe")
-    ctx = js[max(0, i - 300):i + 300]
-    print("Contexto Vilafant:", ctx)
-    cods = [(abs(m.start() - 300), m[0]) for m in re.finditer(r"\b\d{5}\b", ctx)]
+    print("Contexto Vilafant:", js[max(0, i - 300):i + 300])
+    # el codigo esta en el mismo objeto {...} que el nombre; si no hay llaves, el numero mas cercano
+    ini, fin = js.rfind("{", 0, i), js.find("}", i)
+    base = ini if 0 <= ini and fin > 0 and fin - ini < 1000 else max(0, i - 300)
+    obj = js[base:fin] if base == ini else js[base:i + 300]
+    cods = [(abs(base + m.start() - i), m[0]) for m in re.finditer(r"\b\d{5}\b", obj)]
     if not cods:
         sys.exit("No encuentro el codigo de Figueres Vilafant")
     return min(cods)[1]
 
 
+def huella(device_id):
+    return hashlib.sha256(device_id.encode()).hexdigest()[:16]
+
+
 def aplicar(vig, lineas):
-    """Ordenes de la web via ntfy: cada mensaje 'RUTA|fecha|hora' activa o desactiva la vigilancia."""
+    """Ordenes de la web via ntfy, en JSON:
+    {"d": id_dispositivo, "a": "sub", "s": suscripcion_push}  registra el movil
+    {"d": id_dispositivo, "a": "w", "id": "RUTA|fecha|hora"}  activa o desactiva un aviso
+    """
     for line in lineas:
         m = json.loads(line)
         if m.get("event") != "message":
             continue
         vig["since"] = m["id"]
-        c = m.get("message", "").strip()
-        if CMD.fullmatch(c):
-            vig["watches"].remove(c) if c in vig["watches"] else vig["watches"].append(c)
+        try:
+            c = json.loads(m.get("message", ""))
+        except ValueError:
+            continue
+        d = c.get("d") if isinstance(c, dict) else None
+        if not isinstance(d, str) or not 16 <= len(d) <= 64:
+            continue
+        dev = vig["devices"].setdefault(huella(d), {"sub": None, "watches": []})
+        s = c.get("s")
+        if c.get("a") == "sub" and isinstance(s, dict) and str(s.get("endpoint", "")).startswith("https://"):
+            dev["sub"] = {"endpoint": s["endpoint"], "keys": s.get("keys", {})}
+        elif c.get("a") == "w" and isinstance(c.get("id"), str) and CMD.fullmatch(c["id"]):
+            w = dev["watches"]
+            w.remove(c["id"]) if c["id"] in w else w.append(c["id"])
 
 
-def ntfy(path, data=None, headers=None):
-    req = urllib.request.Request(f"https://ntfy.sh/{path}", data=data, headers=headers or {})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.read().decode()
+def leer_ordenes(vig):
+    url = f"https://ntfy.sh/{CMD_TOPIC}/json?poll=1&since={vig.get('since', '12h')}"
+    with urllib.request.urlopen(url, timeout=30) as r:
+        aplicar(vig, r.read().decode().splitlines())
+
+
+def push(sub, titulo, texto):
+    """Envia la notificacion. Devuelve False si la suscripcion ya no existe (app borrada, permiso quitado)."""
+    from pywebpush import WebPushException, webpush
+    try:
+        webpush(sub, json.dumps({"title": titulo, "body": texto, "url": "https://www.renfe.com/es/es"}),
+                vapid_private_key=VAPID_PRIVATE,
+                vapid_claims={"sub": "mailto:avant-vigia@users.noreply.github.com"})
+        return True
+    except WebPushException as e:
+        code = getattr(e.response, "status_code", None)
+        print("Error push", code, e)
+        return code not in (404, 410)
 
 
 async def buscar(page, o, d, fecha, tag):
@@ -130,28 +168,39 @@ async def consultar(fechas):
 
 
 def main():
-    if not TOPIC:
-        sys.exit("Falta el secret NTFY_TOPIC")
     vig = json.loads((SITE / "vigilar.json").read_text())
-    aplicar(vig, ntfy(f"{TOPIC}-cmd/json?poll=1&since={vig.get('since', '12h')}").splitlines())
+    if "devices" not in vig:  # formato antiguo (ntfy): se empieza de cero
+        vig = {"since": "12h", "devices": {}}
+    if VAPID_PUBLIC and VAPID_PRIVATE:
+        leer_ordenes(vig)
+    else:
+        print("Faltan los secrets VAPID_PUBLIC / VAPID_PRIVATE: abre la web para generarlos")
 
     hoy = dt.date.today()
-    vig["watches"] = [w for w in vig["watches"] if w.split("|")[1] >= hoy.isoformat()]
-    fechas = {hoy + dt.timedelta(i) for i in range(DAYS)} | {dt.date.fromisoformat(w.split("|")[1]) for w in vig["watches"]}
+    for dev in vig["devices"].values():
+        dev["watches"] = [w for w in dev["watches"] if w.split("|")[1] >= hoy.isoformat()]
+    fechas = {hoy + dt.timedelta(i) for i in range(DAYS)}
+    fechas |= {dt.date.fromisoformat(w.split("|")[1]) for dev in vig["devices"].values() for w in dev["watches"]}
     status = asyncio.run(consultar(fechas))
     total = sum(len(t) for r in status.values() for t in r.values())
 
     if total:
-        for w in list(vig["watches"]):
-            ruta, fecha, salida = w.split("|")
-            tren = next((t for t in status[ruta].get(fecha, []) if t["salida"] == salida), None)
-            if tren and tren["estado"] == "libre":  # avisa una vez y deja de vigilar
-                ntfy(TOPIC, f"{NOMBRE[ruta]}\n{fecha} a las {salida}: ya hay plazas".encode(),
-                     {"Title": "Plaza libre en Avant", "Priority": "high", "Tags": "train",
-                      "Click": "https://www.renfe.com/es/es"})
-                vig["watches"].remove(w)
+        for h, dev in list(vig["devices"].items()):
+            for w in list(dev["watches"]):
+                ruta, fecha, salida = w.split("|")
+                tren = next((t for t in status[ruta].get(fecha, []) if t["salida"] == salida), None)
+                if not (tren and tren["estado"] == "libre" and dev["sub"] and VAPID_PRIVATE):
+                    continue
+                dia = dt.date.fromisoformat(fecha).strftime("%d/%m")
+                if push(dev["sub"], "Plaza libre en el Avant de las " + salida,
+                        f"{NOMBRE[ruta]}, {dia}. Toca para ir a Renfe."):
+                    dev["watches"].remove(w)  # avisa una vez y deja de vigilar
+                else:
+                    del vig["devices"][h]  # movil dado de baja
+                    break
         (SITE / "estado.json").write_text(json.dumps(
             {"updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="minutes"), "routes": status}))
+    vig["devices"] = {h: d for h, d in vig["devices"].items() if d["sub"] or d["watches"]}
     (SITE / "vigilar.json").write_text(json.dumps(vig))
     if not total:
         sys.exit("0 trenes encontrados: descarga el artifact 'debug' del workflow")
@@ -167,12 +216,18 @@ if __name__ == "__main__":
                    {"lab": lab.format("06:16", "08:51", "REGIONAL"), "aviso": "", "precio": "Precio desde 14,40"}])
         assert [(t["salida"], t["estado"], t["precio"]) for t in r] == [
             ("07:12", "completo", None), ("09:40", "libre", "4,05"), ("11:00", "no_venta", None)], r
-        v = {"watches": [], "since": "12h"}
-        aplicar(v, ['{"event":"open","id":"a"}', '{"event":"message","id":"b","message":"FIG-BCN|2026-11-09|07:12"}',
-                    '{"event":"message","id":"c","message":"basura"}'])
-        assert v == {"watches": ["FIG-BCN|2026-11-09|07:12"], "since": "c"}, v
-        aplicar(v, ['{"event":"message","id":"d","message":"FIG-BCN|2026-11-09|07:12"}'])
-        assert v["watches"] == [], v
+        v = {"since": "12h", "devices": {}}
+        dev_id = "a" * 32
+        sub = {"endpoint": "https://web.push.apple.com/x", "keys": {"p256dh": "k", "auth": "a"}}
+        msg = lambda o, i: json.dumps({"event": "message", "id": i, "message": json.dumps(o)})
+        aplicar(v, ['{"event":"open","id":"a"}',
+                    msg({"d": dev_id, "a": "sub", "s": sub}, "b"),
+                    msg({"d": dev_id, "a": "w", "id": "FIG-BCN|2026-11-09|07:12"}, "c"),
+                    msg({"d": "corto", "a": "w", "id": "FIG-BCN|2026-11-09|07:12"}, "d"),
+                    json.dumps({"event": "message", "id": "e", "message": "basura"})])
+        assert v == {"since": "e", "devices": {huella(dev_id): {"sub": sub, "watches": ["FIG-BCN|2026-11-09|07:12"]}}}, v
+        aplicar(v, [msg({"d": dev_id, "a": "w", "id": "FIG-BCN|2026-11-09|07:12"}, "f")])
+        assert v["devices"][huella(dev_id)]["watches"] == [], v
         print("ok")
     else:
         main()
