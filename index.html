@@ -1,80 +1,310 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Avant Figueres ⇄ Sants</title>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Avant">
+<meta name="theme-color" content="#e9e4f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#120b1f" media="(prefers-color-scheme: dark)">
+<title>Avant · Figueres ⇄ Sants</title>
 <style>
-:root{--bg:#f6f6f4;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--ok:#1f7a3f;--ko:#b3261e;--ac:#6d28d9;--bd:#e4e4df;color-scheme:light}
-@media(prefers-color-scheme:dark){:root{--bg:#141413;--card:#1f1f1d;--tx:#eeeeea;--mu:#9b9b95;--ok:#5cc98a;--ko:#ff8a80;--ac:#9f7aea;--bd:#33332f;color-scheme:dark}}
-body{margin:0;font:16px/1.4 system-ui,sans-serif;background:var(--bg);color:var(--tx)}
-main{max-width:640px;margin:auto;padding:16px}
-header{display:flex;gap:8px;align-items:center;justify-content:space-between}
-select,button{font:inherit;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:8px 12px}
-h2{font-size:15px;color:var(--mu);margin:20px 0 8px}
-.t{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;margin:6px 0}
-.h{font-weight:600;font-variant-numeric:tabular-nums;flex:1}
-.b{font-size:13px;font-weight:600}.libre{color:var(--ok)}.completo{color:var(--ko)}.no_venta{color:var(--mu)}
-button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
-button:disabled{opacity:.6}
-small{color:var(--mu);display:block;margin-top:8px}
-</style></head>
-<body><main>
-<header>
-  <select id="r" aria-label="Trayecto">
-    <option value="FIG-BCN">Figueres Vilafant → Sants</option>
-    <option value="BCN-FIG">Sants → Figueres Vilafant</option>
-  </select>
-  <button id="cfg" aria-label="Configurar avisos">⚙️</button>
-</header>
-<small id="u"></small>
-<div id="l">Cargando…</div>
-</main>
-<script>
-var T = localStorage.getItem('topic') || '', P = JSON.parse(localStorage.getItem('pend') || '{}');
-var E = null, V = [], R = document.getElementById('r'); R.onchange = render;
+:root{
+  --bg:#ece7f8; --b1:#d77ad9; --b2:#6fd0dd; --b3:#8a7cf5;
+  --glass:rgba(255,255,255,.52); --glass-hi:rgba(255,255,255,.78);
+  --edge:rgba(255,255,255,.85); --hair:rgba(60,60,67,.13); --shadow:rgba(40,16,80,.14);
+  --tx:#1c1c1e; --tx2:rgba(60,60,67,.62); --tint:#a3238f; --on-tint:#fff;
+  --ok:#248a3d; --ko:#d70015; --off:rgba(60,60,67,.5);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#120b1f; --b1:#7d2a86; --b2:#145a66; --b3:#3b2f9e;
+    --glass:rgba(44,40,56,.42); --glass-hi:rgba(70,64,88,.62);
+    --edge:rgba(255,255,255,.16); --hair:rgba(255,255,255,.09); --shadow:rgba(0,0,0,.45);
+    --tx:#f2f2f7; --tx2:rgba(235,235,245,.6); --tint:#e46bd3; --on-tint:#1c0b1f;
+    --ok:#30d158; --ko:#ff453a; --off:rgba(235,235,245,.42);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);height:100%}
+body{margin:0;min-height:100%;color:var(--tx);
+  font:17px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);
+  -webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;
+  background:
+    radial-gradient(38% 30% at 18% 22%,var(--b1),transparent 70%),
+    radial-gradient(34% 28% at 85% 12%,var(--b2),transparent 70%),
+    radial-gradient(45% 35% at 70% 78%,var(--b3),transparent 70%),
+    radial-gradient(30% 25% at 12% 88%,var(--b2),transparent 70%);
+  filter:blur(30px);opacity:.75}
 
-document.getElementById('cfg').onclick = function () {
-  var t = prompt('Tu topic de ntfy (el mismo que el secret NTFY_TOPIC). Solo se guarda en este navegador.', T);
-  if (t != null) { T = t.trim(); localStorage.setItem('topic', T); render(); }
-};
+.glass{background:var(--glass);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  border:1px solid var(--edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 10px 30px var(--shadow)}
+
+main{max-width:560px;margin:0 auto;padding:0 16px}
+.title{display:flex;align-items:flex-end;justify-content:space-between;padding:18px 4px 12px}
+h1{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.01em;margin:0}
+.sub{color:var(--tx2);font-size:15px;margin-top:2px}
+
+.iconbtn{position:relative;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  color:var(--tx);cursor:pointer;padding:0}
+.iconbtn svg{width:22px;height:22px}
+.iconbtn .badge{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;
+  background:var(--ko);border:2px solid var(--glass-hi)}
+
+.bar{position:sticky;top:env(safe-area-inset-top);z-index:5;padding:8px 0 10px;margin:0 -16px;padding-inline:16px}
+.bar::before{content:"";position:absolute;inset:0;z-index:-1;
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  -webkit-mask:linear-gradient(#000 70%,transparent);mask:linear-gradient(#000 70%,transparent)}
+
+.seg{display:flex;padding:3px;border-radius:999px;gap:2px}
+.seg button{flex:1;border:0;background:transparent;color:var(--tx);font:inherit;font-size:15px;font-weight:600;
+  padding:9px 6px;border-radius:999px;cursor:pointer;transition:background .25s,box-shadow .25s}
+.seg button[aria-pressed=true]{background:var(--glass-hi);box-shadow:0 2px 10px var(--shadow),inset 0 1px 0 rgba(255,255,255,.5)}
+
+.days{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px 2px 4px;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{flex:0 0 58px;scroll-snap-align:start;border-radius:18px;padding:8px 0 7px;text-align:center;cursor:pointer;
+  color:var(--tx);font:inherit;transition:background .2s,transform .2s}
+.day small{display:block;font-size:12px;color:var(--tx2);text-transform:capitalize}
+.day b{display:block;font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.day i{display:block;width:5px;height:5px;border-radius:50%;margin:3px auto 0;background:transparent}
+.day i.w{background:var(--tint)}
+.day[aria-pressed=true]{background:var(--tint);border-color:transparent;color:var(--on-tint)}
+.day[aria-pressed=true] small{color:inherit;opacity:.8}
+.day[aria-pressed=true] i.w{background:var(--on-tint)}
+.day:active{transform:scale(.95)}
+
+.banner{display:flex;align-items:center;gap:12px;border-radius:22px;padding:14px 16px;margin-top:12px}
+.banner p{margin:0;flex:1;font-size:15px}
+.banner p b{display:block}
+.banner p span{color:var(--tx2)}
+
+.group{border-radius:24px;margin-top:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;position:relative}
+.row+.row::before{content:"";position:absolute;top:0;left:16px;right:0;height:1px;background:var(--hair)}
+.t{flex:1;min-width:0}
+.dep{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.arr{font-size:14px;color:var(--tx2)}
+.st{text-align:right;font-size:14px;line-height:1.25}
+.st b{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
+.st .libre{color:var(--ok)} .st .completo{color:var(--ko)} .st .no_venta{color:var(--off)}
+.row.gone{opacity:.4}
+
+.pill{border:0;font:inherit;font-size:15px;font-weight:600;border-radius:999px;padding:8px 14px;cursor:pointer;
+  color:var(--tint);white-space:nowrap;transition:transform .15s,background .2s}
+.pill:active{transform:scale(.94)}
+.pill.on{background:var(--tint);color:var(--on-tint);border-color:transparent}
+.pill:disabled{opacity:.6}
+.pill.big{display:block;width:100%;padding:14px;font-size:17px;background:var(--tint);color:var(--on-tint)}
+
+.empty{padding:28px 20px;text-align:center;color:var(--tx2)}
+.foot{color:var(--tx2);font-size:13px;text-align:center;margin-top:16px}
+
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .3s}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-width:560px;margin:0 auto;
+  border-radius:30px 30px 0 0;padding:10px 22px calc(env(safe-area-inset-bottom) + 22px);
+  background:var(--glass-hi);transform:translateY(105%);transition:transform .38s cubic-bezier(.2,.9,.25,1)}
+.open .scrim{opacity:1;pointer-events:auto}
+.open .sheet{transform:none}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--hair);margin:0 auto 14px}
+.sheet h2{font-size:22px;margin:0 0 6px}
+.sheet p{margin:0 0 14px;color:var(--tx2);font-size:15px}
+.steps{margin:0 0 16px;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:12px;padding:8px 0;font-size:15px}
+.steps li::before{content:counter(s);flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-size:14px;font-weight:700;background:var(--tint);color:var(--on-tint)}
+.steps a{color:var(--tint)}
+.field{width:100%;font:inherit;padding:13px 16px;border-radius:16px;border:1px solid var(--hair);
+  background:var(--glass);color:var(--tx);margin-bottom:12px}
+.ghost{display:block;margin:10px auto 0;border:0;background:none;color:var(--tx2);font:inherit;font-size:15px;cursor:pointer}
+
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:30;
+  transform:translate(-50%,140%);border-radius:999px;padding:12px 20px;font-size:15px;font-weight:500;
+  max-width:calc(100% - 32px);text-align:center;opacity:0;visibility:hidden;
+  transition:transform .35s cubic-bezier(.2,.9,.25,1),opacity .35s,visibility .35s}
+.toast.show{transform:translate(-50%,0);opacity:1;visibility:visible}
+
+button:focus-visible,.field:focus-visible{outline:2px solid var(--tint);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <div class="title">
+    <div>
+      <h1>Avant</h1>
+      <div class="sub">Figueres-Vilafant y Barcelona-Sants</div>
+    </div>
+    <button class="iconbtn glass" id="bell" aria-label="Configurar avisos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="badge" id="badge" hidden></span>
+    </button>
+  </div>
+
+  <div class="bar">
+    <div class="seg glass" role="group" aria-label="Sentido">
+      <button data-r="FIG-BCN">Figueres → Sants</button>
+      <button data-r="BCN-FIG">Sants → Figueres</button>
+    </div>
+    <div class="days" id="days"></div>
+  </div>
+
+  <div class="banner glass" id="banner" hidden>
+    <p><b>Activa los avisos</b><span>Para que el móvil te avise cuando se libere una plaza.</span></p>
+    <button class="pill glass" id="bannerBtn">Activar</button>
+  </div>
+
+  <div class="group glass" id="list"><div class="empty">Cargando trenes…</div></div>
+  <div class="foot" id="foot"></div>
+</main>
+
+<div id="sheetWrap">
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="grab"></div>
+    <h2 id="sheetTitle">Avisos en tu móvil</h2>
+    <p>Los avisos llegan con la app gratuita ntfy, sin crear ninguna cuenta. Funcionan con un código secreto: el mismo que guardaste en GitHub como NTFY_TOPIC.</p>
+    <ol class="steps">
+      <li><span>Instala <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a> desde la App Store o Google Play.</span></li>
+      <li><span>En ntfy, pulsa + y escribe tu código secreto.</span></li>
+      <li><span>Escríbelo también aquí. Solo se guarda en este dispositivo.</span></li>
+    </ol>
+    <input class="field" id="topic" placeholder="Tu código secreto" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button class="pill big" id="save">Guardar código</button>
+    <button class="ghost" id="close">Ahora no</button>
+  </div>
+</div>
+
+<div class="toast glass" id="toast" role="status"></div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var T = localStorage.getItem('topic') || '';
+var P = JSON.parse(localStorage.getItem('pend') || '{}');
+var E = { routes: {} }, V = [], ruta = localStorage.getItem('ruta') || 'FIG-BCN', fecha = null, intent = null;
+var TZ = 'Europe/Madrid';
+
+function hoy() { return new Date().toLocaleDateString('sv-SE', { timeZone: TZ }); }
+function ahora() { return new Date().toLocaleTimeString('es-ES', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }); }
+function mins(a, b) { var x = a.split(':'), y = b.split(':'); return (y[0] - x[0]) * 60 + (y[1] - x[1]); }
+function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+function toast(msg) {
+  var t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('show'); }, 2800);
+}
+
 function get(f) { return fetch(f + '?' + Date.now()).then(function (r) { return r.json(); }); }
 function load() {
-  Promise.all([get('estado.json'), get('vigilar.json')]).then(function (a) { E = a[0]; V = a[1].watches || []; render(); });
+  Promise.all([get('estado.json'), get('vigilar.json')])
+    .then(function (a) { E = a[0] || { routes: {} }; V = a[1].watches || []; render(); })
+    .catch(function () { $('list').innerHTML = ''; $('list').appendChild(el('div', 'empty', 'No se han podido cargar los trenes. Revisa la conexión.')); });
 }
-function toggle(id, quiero) {
-  if (!T) { document.getElementById('cfg').click(); if (!T) return; }
+
+function send(id, quiero) {
   fetch('https://ntfy.sh/' + encodeURIComponent(T) + '-cmd', { method: 'POST', body: id })
-    .then(function (r) { if (!r.ok) throw 0; P[id] = { q: quiero, t: Date.now() }; render(); })
-    .catch(function () { alert('No se ha podido enviar. Revisa la conexión.'); });
+    .then(function (r) {
+      if (!r.ok) throw 0;
+      P[id] = { q: quiero, t: Date.now() }; render();
+      toast(quiero ? 'Te avisaremos cuando haya plaza' : 'Aviso cancelado');
+    })
+    .catch(function () { toast('No se ha podido enviar. Inténtalo de nuevo.'); });
 }
-function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
+function toggle(id, quiero) { if (!T) { intent = [id, quiero]; openSheet(); return; } send(id, quiero); }
+
+function openSheet() { $('topic').value = T; document.body.classList.add('open'); }
+function closeSheet() { document.body.classList.remove('open'); intent = null; }
+$('bell').onclick = $('bannerBtn').onclick = openSheet;
+$('scrim').onclick = $('close').onclick = closeSheet;
+$('save').onclick = function () {
+  var v = $('topic').value.trim();
+  if (!v) { $('topic').focus(); return; }
+  T = v; localStorage.setItem('topic', T);
+  var i = intent; closeSheet(); render();
+  if (i) send(i[0], i[1]); else toast('Avisos activados en este dispositivo');
+};
+
+document.querySelectorAll('.seg button').forEach(function (b) {
+  b.onclick = function () { ruta = b.dataset.r; localStorage.setItem('ruta', ruta); render(); };
+});
 
 function render() {
-  var l = document.getElementById('l'); l.textContent = '';
-  document.getElementById('u').textContent = (E.updated
-    ? 'Actualizado ' + new Date(E.updated).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })
-    : 'Sin datos aún') + ' · se revisa cada ~10 min' + (T ? '' : ' · ⚙️ configura tus avisos');
-  var d = (E.routes || {})[R.value] || {}, fs = Object.keys(d).sort();
-  if (!fs.length) l.textContent = 'Todavía no hay datos.';
+  var h = hoy(), now = ahora();
+  document.querySelectorAll('.seg button').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.r === ruta); });
+  $('badge').hidden = !!T;
+  $('banner').hidden = !!T;
+
+  var d = (E.routes || {})[ruta] || {};
+  var fs = Object.keys(d).filter(function (f) { return f >= h; }).sort();
+  if (fs.indexOf(fecha) < 0) fecha = fs[0] || null;
+
+  var days = $('days'); days.textContent = '';
   fs.forEach(function (f) {
-    l.appendChild(el('h2', '', new Date(f + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })));
-    if (!d[f].length) l.appendChild(el('small', '', 'Sin Avant este día'));
-    d[f].forEach(function (t) {
-      var id = R.value + '|' + f + '|' + t.salida, w = V.indexOf(id) >= 0, p = P[id];
-      if (p && (p.q === w || Date.now() - p.t > 30 * 60000)) { delete P[id]; p = null; }
-      var row = el('div', 't');
-      row.appendChild(el('span', 'h', t.salida + ' → ' + t.llegada + (t.precio ? ' · ' + t.precio + ' €' : '')));
-      row.appendChild(el('span', 'b ' + t.estado, t.estado == 'libre' ? 'Libre' : t.estado == 'completo' ? 'Completo' : 'No a la venta'));
-      if (p) { var b = el('button', '', '⏳ Pendiente'); b.disabled = true; row.appendChild(b); }
-      else if (w || t.estado != 'libre') {
-        b = el('button', w ? 'on' : '', w ? '🔔 Vigilando' : 'Avísame');
-        b.onclick = function () { toggle(id, !w); };
-        row.appendChild(b);
-      }
-      l.appendChild(row);
-    });
+    var dt = new Date(f + 'T12:00:00');
+    var b = el('button', 'day glass');
+    b.setAttribute('aria-pressed', f === fecha);
+    b.appendChild(el('small', '', f === h ? 'hoy' : dt.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '')));
+    b.appendChild(el('b', '', dt.getDate()));
+    var vig = V.some(function (w) { return w.indexOf(ruta + '|' + f + '|') === 0; });
+    b.appendChild(el('i', vig ? 'w' : ''));
+    b.onclick = function () { fecha = f; render(); };
+    days.appendChild(b);
   });
+
+  var list = $('list'); list.textContent = '';
+  if (!fecha) { list.appendChild(el('div', 'empty', 'Aún no hay datos. El primer chequeo tarda unos minutos.')); }
+  else {
+    var trenes = (d[fecha] || []).filter(function (t) { return fecha !== h || t.salida >= now; });
+    if (!trenes.length) list.appendChild(el('div', 'empty', fecha === h ? 'Hoy ya no quedan Avant en este sentido.' : 'No hay Avant este día.'));
+    trenes.forEach(function (t) {
+      var id = ruta + '|' + fecha + '|' + t.salida, w = V.indexOf(id) >= 0, p = P[id];
+      if (p && (p.q === w || Date.now() - p.t > 30 * 60000)) { delete P[id]; p = null; }
+
+      var row = el('div', 'row');
+      var tm = el('div', 't');
+      tm.appendChild(el('div', 'dep', t.salida));
+      tm.appendChild(el('div', 'arr', 'Llega ' + t.llegada + ', ' + mins(t.salida, t.llegada) + ' min'));
+      row.appendChild(tm);
+
+      var st = el('div', 'st');
+      if (t.estado === 'libre') {
+        st.appendChild(el('b', '', t.precio ? t.precio + ' €' : ''));
+        st.appendChild(el('span', 'libre', 'Plazas libres'));
+      } else {
+        st.appendChild(el('span', t.estado, t.estado === 'completo' ? 'Completo' : 'Sin venta'));
+      }
+      row.appendChild(st);
+
+      if (p || w || t.estado !== 'libre') {
+        var btn = el('button', 'pill glass' + (w ? ' on' : ''), p ? (p.q ? 'Activando…' : 'Cancelando…') : w ? 'Te avisaré' : 'Avisarme');
+        btn.disabled = !!p;
+        btn.setAttribute('aria-label', (w ? 'Cancelar aviso del tren de las ' : 'Avisarme del tren de las ') + t.salida);
+        btn.onclick = function () { toggle(id, !w); };
+        row.appendChild(btn);
+      }
+      list.appendChild(row);
+    });
+  }
   localStorage.setItem('pend', JSON.stringify(P));
+
+  var foot = 'Se comprueba cada 10 minutos.';
+  if (E.updated) {
+    var m = Math.round((Date.now() - new Date(E.updated)) / 60000);
+    foot = (m < 1 ? 'Actualizado ahora. ' : 'Actualizado hace ' + m + ' min. ') + foot;
+  }
+  $('foot').textContent = foot;
 }
-load(); setInterval(load, 60000);
+
+load();
+setInterval(load, 60000);
 </script>
-</body></html>
+</body>
+</html>
