@@ -17,6 +17,9 @@ NOMBRE = {"FIG-BCN": "Figueres Vilafant → Barcelona Sants", "BCN-FIG": "Barcel
 SEARCH_URL = "https://venta.renfe.com/vol/buscarTren.do?Idioma=es&Pais=ES"
 HORAS = re.compile(r"salida a las (\d\d:\d\d) y llegada a las (\d\d:\d\d)")
 TIPO = re.compile(r"Tipo de tren: ([^.]+)")
+# "Solo quedan plazas H" (sitio para silla de ruedas): no cuenta como plaza libre
+SOLO_H = re.compile(r"(s[oó]lo|[uú]nicamente|[uú]nicas?)\W+(\w+\W+){0,4}plazas?\W*h\b"
+                    r"|plazas?\W*h\b\W+(\w+\W+){0,3}(s[oó]lo|[uú]nicamente)", re.I)
 CMD = re.compile(r"(FIG-BCN|BCN-FIG)\|\d{4}-\d\d-\d\d\|\d\d:\d\d")
 
 SUBMIT_JS = """({url, fields}) => {
@@ -32,6 +35,7 @@ ROWS_JS = """() => [...document.querySelectorAll('#listaTrenesTBodyIda > div[id^
   lab: [...r.querySelectorAll('[aria-label]')].map(e => e.getAttribute('aria-label')).join(' '),
   aviso: r.querySelector('#boton-style')?.getAttribute('title') || '',
   precio: r.querySelector('.precio-final')?.getAttribute('title') || '',
+  txt: r.innerText || '',
 }))"""
 
 
@@ -54,9 +58,14 @@ def parse(rows):
         aviso = r["aviso"].lower()
         if "no circula" in aviso:
             continue
+        texto = " ".join([r["aviso"], r.get("txt", "")])
+        if re.search(r"plazas?\W*h\b", texto, re.I):
+            print("  plaza H en el tren de las", h[1], "->", " ".join(texto.split())[:200])
         precio = re.search(r"\d+,\d{2}", r["precio"])
-        trenes[h[1]] = {"salida": h[1], "llegada": h[2], "precio": precio[0] if precio else None,
-                        "estado": "completo" if "completo" in aviso else "no_venta" if aviso else "libre"}
+        estado = ("completo" if "completo" in aviso else "solo_h" if SOLO_H.search(texto)
+                  else "no_venta" if aviso else "libre")
+        trenes[h[1]] = {"salida": h[1], "llegada": h[2], "precio": precio[0] if estado == "libre" and precio else None,
+                        "estado": estado}
     return sorted(trenes.values(), key=lambda x: x["salida"])
 
 
@@ -234,9 +243,15 @@ if __name__ == "__main__":
                    {"lab": lab.format("09:40", "10:33", "AVANT"), "aviso": "", "precio": "Precio desde 4,05"},
                    {"lab": lab.format("11:00", "11:50", "AVANT"), "aviso": "Este tren no se encuentra disponible para la venta", "precio": ""},
                    {"lab": lab.format("12:00", "12:50", "AVANT"), "aviso": "Tren no circula", "precio": ""},
-                   {"lab": lab.format("06:16", "08:51", "REGIONAL"), "aviso": "", "precio": "Precio desde 14,40"}])
+                   {"lab": lab.format("06:16", "08:51", "REGIONAL"), "aviso": "", "precio": "Precio desde 14,40"},
+                   {"lab": lab.format("13:00", "13:55", "AVANT"), "aviso": "", "precio": "Precio desde 22,40",
+                    "txt": "13:00 h 55 minutos AVANT Solo quedan plazas H disponibles"},
+                   {"lab": lab.format("14:00", "14:55", "AVANT"), "aviso": "Sólo plaza H disponible", "precio": ""},
+                   {"lab": lab.format("15:00", "15:55", "AVANT"), "aviso": "", "precio": "Precio desde 22,40",
+                    "txt": "15:00 AVANT 22,40 € Plaza H disponible Plaza bicicleta disponible"}])
         assert [(t["salida"], t["estado"], t["precio"]) for t in r] == [
-            ("07:12", "completo", None), ("09:40", "libre", "4,05"), ("11:00", "no_venta", None)], r
+            ("07:12", "completo", None), ("09:40", "libre", "4,05"), ("11:00", "no_venta", None),
+            ("13:00", "solo_h", None), ("14:00", "solo_h", None), ("15:00", "libre", "22,40")], r
         v = {"since": "12h", "devices": {}}
         dev_id = "a" * 32
         sub = {"endpoint": "https://web.push.apple.com/x", "keys": {"p256dh": "k", "auth": "a"}}

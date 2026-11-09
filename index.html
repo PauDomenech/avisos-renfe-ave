@@ -108,7 +108,7 @@ h1{font-size:34px;line-height:1.1;font-weight:700;letter-spacing:.01em;margin:0}
 .arr{font-size:14px;color:var(--tx2)}
 .st{text-align:right;font-size:14px;line-height:1.25}
 .st b{display:block;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
-.st .libre{color:var(--ok)} .st .completo{color:var(--ko)} .st .no_venta{color:var(--off)}
+.st .libre{color:var(--ok)} .st .completo,.st .solo_h{color:var(--ko)} .st .no_venta{color:var(--off)}
 
 .pill{border:0;font:inherit;font-size:15px;font-weight:600;border-radius:999px;padding:8px 14px;cursor:pointer;
   color:var(--tint);white-space:nowrap;transition:transform .15s,background .2s}
@@ -537,7 +537,7 @@ function render() {
         st.appendChild(el('b', '', t.precio ? t.precio + ' €' : ''));
         st.appendChild(el('span', 'libre', 'Plazas libres'));
       } else {
-        st.appendChild(el('span', t.estado, t.estado === 'completo' ? 'Completo' : 'Sin venta'));
+        st.appendChild(el('span', t.estado, { completo: 'Completo', solo_h: 'Solo plaza H', no_venta: 'Sin venta' }[t.estado] || 'Sin plazas'));
       }
       row.appendChild(st);
 
