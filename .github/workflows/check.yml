@@ -9,26 +9,31 @@ concurrency:
   group: avant
 jobs:
   check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Recuperar datos anteriores
         run: |
           mkdir -p site
           git fetch -q origin gh-pages:refs/remotes/origin/gh-pages || true
-          git show origin/gh-pages:vigilar.json > site/vigilar.json 2>/dev/null || echo '{"watches":[],"since":"12h"}' > site/vigilar.json
+          git show origin/gh-pages:vigilar.json > site/vigilar.json 2>/dev/null || echo '{"since":"12h","devices":{}}' > site/vigilar.json
           git show origin/gh-pages:estado.json > site/estado.json 2>/dev/null || echo '{"updated":null,"routes":{}}' > site/estado.json
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install playwright==1.48.0 && python -m playwright install --with-deps chromium
+      - run: pip install playwright==1.48.0 pywebpush==2.0.3 && python -m playwright install --with-deps chromium
       - run: python check.py
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          VAPID_PUBLIC: ${{ secrets.VAPID_PUBLIC }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          FIG_CODE: ${{ secrets.FIG_CODE }}
       - name: Publicar web
         if: always()
+        env:
+          VAPID_PUBLIC: ${{ secrets.VAPID_PUBLIC }}
         run: |
-          cp index.html site/ && touch site/.nojekyll
+          cp index.html sw.js manifest.json icon.png site/ && touch site/.nojekyll
+          python -c "import json,os; json.dump({'vapid': os.environ.get('VAPID_PUBLIC','').strip()}, open('site/config.json','w'))"
           cd site && git init -q -b gh-pages && git add -A
           git -c user.name=avant-bot -c user.email=avant-bot@users.noreply.github.com commit -qm datos
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
