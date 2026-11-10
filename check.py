@@ -144,16 +144,25 @@ def push(sub, titulo, texto):
         return "baja" if code in (404, 410) else "error"
 
 
+FILAS = '#listaTrenesTBodyIda > div[id^="tren_i_"]'
+BUDGET = int(os.getenv("BUDGET", str(11 * 60)))  # segundos maximos buscando, para no pasarse del timeout
+
+
 async def buscar(page, o, d, fecha, tag):
     try:
-        async with page.expect_navigation(wait_until="networkidle", timeout=60000):
+        # sin esperar a "networkidle": la web de Renfe nunca deja de cargar cosas y cada busqueda tardaba ~1 min
+        async with page.expect_navigation(wait_until="domcontentloaded", timeout=45000):
             await page.evaluate(SUBMIT_JS, {"url": SEARCH_URL, "fields": form(o, d, fecha)})
-        await page.wait_for_timeout(3000)  # la disponibilidad a veces llega despues por XHR
+        try:
+            await page.wait_for_selector(FILAS, timeout=12000)
+            await page.wait_for_timeout(1000)
+        except Exception:
+            pass  # dia sin trenes (o aun sin venta)
         trenes = parse(await page.evaluate(ROWS_JS))
     except Exception as e:
-        print(tag, "ERROR", e)
+        print(tag, "ERROR", str(e).splitlines()[0])
         trenes = None
-    if not trenes:
+    if not trenes and len(list(DEBUG.glob("*.png"))) < 3:  # pocas capturas, que son lentas
         DEBUG.mkdir(exist_ok=True)
         (DEBUG / f"{tag}.html").write_text(await page.content(), encoding="utf-8")
         await page.screenshot(path=str(DEBUG / f"{tag}.png"), full_page=True)
@@ -161,8 +170,11 @@ async def buscar(page, o, d, fecha, tag):
 
 
 async def consultar(fechas):
+    """fechas en orden de prioridad; si se acaba el tiempo, se queda con lo que tenga."""
+    import time
     from playwright.async_api import async_playwright
-    status = {}
+    inicio = time.monotonic()
+    status = {"FIG-BCN": {}, "BCN-FIG": {}}
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page(locale="es-ES", user_agent=(
@@ -174,14 +186,21 @@ async def consultar(fechas):
             pass
         fig = ("FIGUERES VILAFANT", await codigo_figueres(page))
         print("Codigo Figueres Vilafant:", fig[1])
-        for ruta, (o, d) in {"FIG-BCN": (fig, BCN), "BCN-FIG": (BCN, fig)}.items():
-            status[ruta] = {}
-            for f in sorted(fechas):
+        rutas = {"FIG-BCN": (fig, BCN), "BCN-FIG": (BCN, fig)}
+        hechas = 0
+        for f in fechas:
+            if time.monotonic() - inicio > BUDGET:
+                print(f"Tiempo agotado: {hechas}/{len(fechas)} dias consultados, el resto en la proxima")
+                break
+            for ruta, (o, d) in rutas.items():
+                t0 = time.monotonic()
                 trenes = await buscar(page, o, d, f, f"{ruta}_{f}")
                 if trenes is not None:
                     status[ruta][f.isoformat()] = trenes
-                print(ruta, f, "->", trenes)
+                print(f"{ruta} {f} ({time.monotonic() - t0:.0f}s) ->", len(trenes or []), "trenes")
+            hechas += 1
         await browser.close()
+    print(f"Busqueda total: {time.monotonic() - inicio:.0f}s")
     return status
 
 
@@ -206,7 +225,10 @@ def main():
     lejos = {hoy + dt.timedelta(NEAR + (turno * ROT + k) % (HORIZON - NEAR)) for k in range(ROT)}
     vigiladas = {dt.date.fromisoformat(w.split("|")[1]) for dev in vig["devices"].values() for w in dev["watches"]}
     pedidas = {dt.date.fromisoformat(f) for f in vig["pedidos"]}
-    status = asyncio.run(consultar(cerca | lejos | vigiladas | pedidas))
+    orden_fechas = []  # prioridad: proximos dias, los vigilados, los pedidos y por ultimo los lejanos
+    for grupo in (cerca, vigiladas, pedidas, lejos):
+        orden_fechas += [f for f in sorted(grupo) if f not in orden_fechas]
+    status = asyncio.run(consultar(orden_fechas))
     total = sum(len(status[r].get(f.isoformat(), [])) for r in status for f in cerca)
 
     if total:
