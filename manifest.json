@@ -1,0 +1,10 @@
+{
+  "name": "Avant Figueres ⇄ Sants",
+  "short_name": "Avant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1416",
+  "theme_color": "#0b6e69",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}
